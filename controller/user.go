@@ -289,6 +289,16 @@ func GenerateAccessToken(c *gin.Context) {
 		})
 		return
 	}
+
+	// if the user already has a accessToken, then return the existing accessToken
+	if user.AccessToken != "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "",
+			"data":    user.AccessToken,
+		})
+		return
+	}
 	user.AccessToken = random.GetUUID()
 
 	if model.DB.Where("access_token = ?", user.AccessToken).First(user).RowsAffected != 0 {
