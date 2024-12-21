@@ -1,21 +1,26 @@
+# Stage 1: Build frontend
 FROM --platform=$BUILDPLATFORM node:16 AS builder
 
 WORKDIR /web
 COPY ./VERSION .
 COPY ./web .
 
+# 只构建一个前端，选择一个你想构建的前端（例如默认前端）
 WORKDIR /web/default
 RUN npm install
 RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat VERSION) npm run build
 
-WORKDIR /web/berry
-RUN npm install
-RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat VERSION) npm run build
+# 如果你只需要构建一个前端（例如 `default`），你可以注释掉以下两个部分：
+# WORKDIR /web/berry
+# RUN npm install
+# RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat VERSION) npm run build
 
-WORKDIR /web/air
-RUN npm install
-RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat VERSION) npm run build
+# WORKDIR /web/air
+# RUN npm install
+# RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat VERSION) npm run build
 
+
+# Stage 2: Build Go backend
 FROM golang:alpine AS builder2
 
 RUN apk add --no-cache g++
@@ -31,6 +36,7 @@ COPY . .
 COPY --from=builder /web/build ./web/build
 RUN go build -trimpath -ldflags "-s -w -X 'github.com/songquanpeng/one-api/common.Version=$(cat VERSION)' -extldflags '-static'" -o one-api
 
+# Stage 3: Final image
 FROM alpine
 
 RUN apk update \
